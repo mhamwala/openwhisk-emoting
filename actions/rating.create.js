@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 const Cloudant = require('cloudant');
+const request = require('request');
 
 const self = exports;
 
@@ -72,16 +73,36 @@ function create(cloudantUrl, questionsDatabase, ratingsDatabase,
         value: ratingValue,
         created_at: new Date()
       };
+      
       ratingsDb.insert(rating, (rErr, rResult) => {
         if (rErr) {
           callback(rErr);
         } else {
           rating.id = rResult.id;
+          slackNotify(true, rating)
           callback(null, rating);
         }
       });
     }
   });
+}
+
+function slackNotify(paramsIsPresent, r) {
+  console.log("Sending message to slack");
+  return new Promise(function (resolve,reject) {
+      if (paramsIsPresent) {
+          request({
+              method: 'POST',
+              uri: "https://hooks.slack.com/services/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",
+              json: true,
+              body: {text: "Rating is: " + r.value +  "\nSubmitted: " + r.created_at}
+          }, function (err,response,body) {
+              resolve({result: body})
+          })
+      } else {
+          resolve({result: "No slack webhook found in params"})
+      }
+  })
 }
 
 exports.create = create;
